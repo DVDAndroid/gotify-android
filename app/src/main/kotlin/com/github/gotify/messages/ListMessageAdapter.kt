@@ -94,6 +94,12 @@ internal class ListMessageAdapter(
         holder.setDateTime(message.message.date, timeFormat == timeFormatRelative)
         holder.date.setOnClickListener { holder.switchTimeFormat() }
 
+        Extras.getNotificationUrl(message.message)?.let { url ->
+            holder.itemView.setOnClickListener {
+                Utils.openUrl(context, url)
+            }
+        }
+
         holder.delete.setOnClickListener {
             delete.delete(message.message)
         }
