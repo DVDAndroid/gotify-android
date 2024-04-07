@@ -35,6 +35,7 @@ import com.github.gotify.log.UncaughtExceptionHandler
 import com.github.gotify.messages.Extras
 import com.github.gotify.messages.IntentUrlDialogActivity
 import com.github.gotify.messages.MessagesActivity
+import com.github.gotify.messages.PostponeMessageActivity
 import io.noties.markwon.Markwon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -366,6 +367,19 @@ internal class WebSocketService : Service() {
             showNotificationGroup(channelId)
         }
 
+        val postponeAction = NotificationCompat.Action(
+            R.drawable.ic_gotify,
+            getString(R.string.postpone),
+            PendingIntent.getActivity(
+                this,
+                Utils.longToInt(id),
+                Intent(this, PostponeMessageActivity::class.java).apply {
+                    putExtra("id", id)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        )
+
         b.setAutoCancel(true)
             .setDefaults(Notification.DEFAULT_ALL)
             .setWhen(System.currentTimeMillis())
@@ -378,6 +392,7 @@ internal class WebSocketService : Service() {
             .setLights(Color.CYAN, 1000, 5000)
             .setColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
             .setContentIntent(contentIntent)
+            .addAction(postponeAction)
 
         var formattedMessage = message as CharSequence
         var newMessage: String? = null

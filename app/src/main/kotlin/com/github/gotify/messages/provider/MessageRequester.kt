@@ -45,15 +45,15 @@ internal class MessageRequester(private val messageApi: MessageApi) {
         }
     }
 
-    fun postponeMessage(message: Message, postponeAt: OffsetDateTime?): Boolean {
+    fun postponeMessage(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
         return try {
             if (postponeAt == null) {
-                messageApi.unpostponeMessage(message.id).enqueue(Callback.call())
+                messageApi.unpostponeMessage(messageId).enqueue(Callback.call())
                 return true
             }
 
             val rfc3339String = postponeAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"))
-            messageApi.postponeMessage(message.id, rfc3339String).enqueue(Callback.call())
+            messageApi.postponeMessage(messageId, rfc3339String).enqueue(Callback.call())
             true
         } catch (e: ApiException) {
             false

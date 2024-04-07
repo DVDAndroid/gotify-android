@@ -625,7 +625,7 @@ internal class MessagesActivity :
         withContext(Dispatchers.Main) {
             startLoading()
         }
-        val success = viewModel.messages.postpone(message, at)
+        val success = viewModel.messages.postpone(message.id, at)
         if (success) {
             updateMessagesForApplication(false, viewModel.appId)
         } else {
@@ -639,7 +639,7 @@ internal class MessagesActivity :
         withContext(Dispatchers.Main) {
             startLoading()
         }
-        val success = viewModel.messages.postpone(message, postponeAt = null)
+        val success = viewModel.messages.postpone(message.id, postponeAt = null)
         if (success) {
             updateMessagesForApplication(false, viewModel.appId)
         } else {

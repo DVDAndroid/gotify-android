@@ -73,6 +73,11 @@
             android:name=".messages.IntentUrlDialogActivity"
             android:exported="false"
             android:theme="@style/AppTheme.Dialog" />
+        <activity
+            android:name=".messages.PostponeMessageActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.Transparent"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".service.WebSocketService"

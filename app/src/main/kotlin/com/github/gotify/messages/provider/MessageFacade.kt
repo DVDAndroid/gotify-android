@@ -78,8 +78,8 @@ internal class MessageFacade(api: MessageApi, private val applicationHolder: App
     fun canLoadMore(appId: Long): Boolean = state.state(appId).hasNext
 
     @Synchronized
-    fun postpone(message: Message, postponeAt: OffsetDateTime?): Boolean {
-        return requester.postponeMessage(message, postponeAt)
+    fun postpone(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
+        return requester.postponeMessage(messageId, postponeAt)
     }
 
 }
