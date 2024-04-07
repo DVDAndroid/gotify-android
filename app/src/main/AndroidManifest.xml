@@ -77,7 +77,9 @@
             android:name=".messages.PostponeMessageActivity"
             android:exported="false"
             android:theme="@style/AppTheme.Transparent"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true" />
 
         <service
             android:name=".service.WebSocketService"

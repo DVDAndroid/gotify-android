@@ -24,6 +24,7 @@ internal class PostponeMessageDialog(
     private val activity: AppCompatActivity,
     private val layoutInflater: LayoutInflater,
     private val onPositiveButtonClick: (OffsetDateTime) -> Unit,
+    private val onNegativeButtonClick: (() -> Unit)? = null,
     private val onNeutralButtonClick: () -> Unit,
     private val defaultDateTime: OffsetDateTime?,
 ) {
@@ -101,7 +102,7 @@ internal class PostponeMessageDialog(
                     dateTime.atZoneSameInstant(ZoneOffset.UTC).toOffsetDateTime()
                 )
             }
-            .setNegativeButton(activity.getString(R.string.cancel), null)
+            .setNegativeButton(activity.getString(R.string.cancel), onNegativeButtonClick?.let { { _, _ -> it() } })
             .apply {
                 if (defaultDateTime != null) {
                     setNeutralButton("Delete postponement") { _, _ -> onNeutralButtonClick() }

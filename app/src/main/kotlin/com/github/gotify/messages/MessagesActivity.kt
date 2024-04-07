@@ -369,6 +369,7 @@ internal class MessagesActivity :
                     onRefresh()
                 }
             },
+            onNegativeButtonClick = null,
             onNeutralButtonClick = {
                 launchCoroutine {
                     removePostponement(message)

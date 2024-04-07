@@ -35,6 +35,9 @@ class PostponeMessageActivity : AppCompatActivity() {
                     finish()
                 }
             },
+            onNegativeButtonClick = {
+                finish()
+            },
             onNeutralButtonClick = {
                 launchCoroutine {
                     viewModel.messages.postpone(messageId, null)
