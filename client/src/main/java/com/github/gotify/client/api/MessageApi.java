@@ -34,7 +34,7 @@ public interface MessageApi {
 
   /**
    * Delete all messages from a specific application.
-   * 
+   *
    * @param id the application id (required)
    * @return Call&lt;Void&gt;
    */
@@ -48,7 +48,7 @@ public interface MessageApi {
 
   /**
    * Deletes a message with an id.
-   * 
+   *
    * @param id the message id (required)
    * @return Call&lt;Void&gt;
    */
@@ -62,7 +62,7 @@ public interface MessageApi {
 
   /**
    * Delete all messages.
-   * 
+   *
    * @return Call&lt;Void&gt;
    */
   @Headers({
@@ -70,11 +70,38 @@ public interface MessageApi {
   })
   @DELETE("message")
   Call<Void> deleteMessages();
-    
+
+  /**
+   * Postpone message to date
+   *
+   * @param id the message id (required)
+   * @param date the date to postpone the message to (required)
+   */
+  @Headers({
+    "Content-Type:application/json"
+  })
+  @POST("message/{id}/postpone")
+  Call<Void> postponeMessage(
+    @retrofit2.http.Path("id") Long id,
+    @retrofit2.http.Query("at") String date
+  );
+
+  /**
+   * Delete message postponement
+   *
+   * @param id the message id (required)
+   */
+  @Headers({
+    "Content-Type:application/json"
+  })
+  @DELETE("message/{id}/postpone")
+  Call<Void> unpostponeMessage(
+    @retrofit2.http.Path("id") Long id
+  );
 
   /**
    * Return all messages from a specific application.
-   * 
+   *
    * @param id the application id (required)
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
@@ -90,7 +117,7 @@ public interface MessageApi {
 
   /**
    * Return all messages.
-   * 
+   *
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
    * @return Call&lt;PagedMessages&gt;
@@ -105,7 +132,7 @@ public interface MessageApi {
 
   /**
    * Websocket, return newly created messages.
-   * 
+   *
    * @return Call&lt;Message&gt;
    */
   @Headers({
@@ -113,6 +140,6 @@ public interface MessageApi {
   })
   @GET("stream")
   Call<Message> streamMessages();
-    
+
 
 }

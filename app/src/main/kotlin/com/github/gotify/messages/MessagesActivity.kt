@@ -47,6 +47,7 @@ import com.github.gotify.client.model.Application
 import com.github.gotify.client.model.Client
 import com.github.gotify.client.model.Message
 import com.github.gotify.databinding.ActivityMessagesBinding
+import com.github.gotify.dialog.PostponeMessageDialog
 import com.github.gotify.init.InitializationActivity
 import com.github.gotify.log.LogsActivity
 import com.github.gotify.login.LoginActivity
@@ -55,12 +56,14 @@ import com.github.gotify.messages.provider.MessageWithImage
 import com.github.gotify.service.WebSocketService
 import com.github.gotify.settings.SettingsActivity
 import com.github.gotify.sharing.ShareActivity
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.threeten.bp.OffsetDateTime
 import org.tinylog.kotlin.Logger
 
 internal class MessagesActivity :
@@ -75,13 +78,8 @@ internal class MessagesActivity :
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val messageJson = intent.getStringExtra("message")
-            val message = Utils.JSON.fromJson(
-                messageJson,
-                Message::class.java
-            )
             launchCoroutine {
-                addSingleMessage(message)
+                onRefresh()
             }
         }
     }
@@ -103,10 +101,10 @@ internal class MessagesActivity :
         listMessageAdapter = ListMessageAdapter(
             this,
             viewModel.settings,
-            CoilInstance.get(this)
-        ) { message ->
-            scheduleDeletion(message)
-        }
+            CoilInstance.get(this),
+            delete = { message -> scheduleDeletion(message) },
+            postpone = { message -> postponeDialog(message) },
+        )
         addBackPressCallback()
 
         messagesView.addItemDecoration(dividerItemDecoration)
@@ -183,6 +181,7 @@ internal class MessagesActivity :
                 if (message.image != null) {
                     listMessageAdapter.notifyItemChanged(index)
                 }
+                listMessageAdapter.notifyDataSetChanged()
             }
         }
     }
@@ -358,6 +357,27 @@ internal class MessagesActivity :
         messages.deleteLocal(message)
         adapter.updateList(messages[viewModel.appId])
         showDeletionSnackbar()
+    }
+
+    private fun postponeDialog(message: Message) {
+        val dialog = PostponeMessageDialog(
+            this,
+            layoutInflater,
+            onPositiveButtonClick = { at ->
+                launchCoroutine {
+                    postponeMessage(message, at)
+                    onRefresh()
+                }
+            },
+            onNeutralButtonClick = {
+                launchCoroutine {
+                    removePostponement(message)
+                    onRefresh()
+                }
+            },
+            message.postponedAt,
+        )
+        dialog.show()
     }
 
     private fun undoDelete() {
@@ -597,6 +617,34 @@ internal class MessagesActivity :
         } else {
             withContext(Dispatchers.Main) {
                 Utils.showSnackBar(this@MessagesActivity, "Delete failed :(")
+            }
+        }
+    }
+
+    private suspend fun postponeMessage(message: Message, at: OffsetDateTime) {
+        withContext(Dispatchers.Main) {
+            startLoading()
+        }
+        val success = viewModel.messages.postpone(message, at)
+        if (success) {
+            updateMessagesForApplication(false, viewModel.appId)
+        } else {
+            withContext(Dispatchers.Main) {
+                Utils.showSnackBar(this@MessagesActivity, "Postpone failed :(")
+            }
+        }
+    }
+
+    private suspend fun removePostponement(message: Message) {
+        withContext(Dispatchers.Main) {
+            startLoading()
+        }
+        val success = viewModel.messages.postpone(message, postponeAt = null)
+        if (success) {
+            updateMessagesForApplication(false, viewModel.appId)
+        } else {
+            withContext(Dispatchers.Main) {
+                Utils.showSnackBar(this@MessagesActivity, "Remove postponement failed :(")
             }
         }
     }
