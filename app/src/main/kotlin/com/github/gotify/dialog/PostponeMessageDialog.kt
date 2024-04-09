@@ -108,6 +108,7 @@ internal class PostponeMessageDialog(
                     setNeutralButton("Delete postponement") { _, _ -> onNeutralButtonClick() }
                 }
             }
+            .setOnDismissListener { onNegativeButtonClick?.let { it() } }
             .show()
         return this
     }
