@@ -1,2 +1,10 @@
 [*.{kt,kts}]
 ktlint_code_style = android_studio
+
+[*.java]
+indent_style = space
+indent_size = 2
+
+[*.kt]
+indent_style = space
+indent_size = 4

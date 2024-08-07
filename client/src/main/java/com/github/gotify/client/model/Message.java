@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.threeten.bp.OffsetDateTime;
 import org.threeten.bp.OffsetDateTime;
 
 /**
@@ -52,6 +54,9 @@ public class Message {
 
   @SerializedName("title")
   private String title = null;
+
+  @SerializedName("postponed_at")
+  private OffsetDateTime postponedAt = null;
 
    /**
    * The application id that send this message.
@@ -160,6 +165,18 @@ public class Message {
     this.title = title;
   }
 
+  /**
+   * The date the message was postponed to.
+   * @return postponedAt
+   */
+  @ApiModelProperty(example = "2018-02-27T19:36:10.504Z", value = "The date the message was postponed to.")
+  public OffsetDateTime getPostponedAt() {
+    return postponedAt;
+  }
+
+  public void setPostponedAt(OffsetDateTime postponedAt) {
+    this.postponedAt = postponedAt;
+  }
 
   @Override
   public boolean equals(java.lang.Object o) {
@@ -176,12 +193,13 @@ public class Message {
         Objects.equals(this.id, message.id) &&
         Objects.equals(this.message, message.message) &&
         Objects.equals(this.priority, message.priority) &&
-        Objects.equals(this.title, message.title);
+        Objects.equals(this.title, message.title) &&
+        Objects.equals(this.postponedAt, message.postponedAt);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(appid, date, extras, id, message, priority, title);
+    return Objects.hash(appid, date, extras, id, message, priority, title, postponedAt);
   }
 
 
@@ -197,6 +215,7 @@ public class Message {
     sb.append("    message: ").append(toIndentedString(message)).append("\n");
     sb.append("    priority: ").append(toIndentedString(priority)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
+    sb.append("    postponedAt: ").append(toIndentedString(postponedAt)).append("\n");
     sb.append("}");
     return sb.toString();
   }

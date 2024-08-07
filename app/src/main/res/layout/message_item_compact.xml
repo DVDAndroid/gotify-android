@@ -57,6 +57,17 @@
         app:layout_constraintTop_toBottomOf="@+id/message_title" />
 
     <ImageButton
+        android:id="@+id/message_postpone"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@null"
+        android:contentDescription="@string/postpone_message"
+        app:layout_constraintBottom_toBottomOf="@+id/message_date"
+        app:layout_constraintEnd_toStartOf="@+id/message_delete"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_schedule" />
+
+    <ImageButton
         android:id="@+id/message_delete"
         android:layout_width="30dp"
         android:layout_height="30dp"

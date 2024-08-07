@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:ignore="KeyboardInaccessibleWidget">
+
+  <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/dateInputLayout"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_weight="1">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/dateEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:clickable="true"
+        android:cursorVisible="false"
+        android:drawableEnd="@drawable/ic_calendar"
+        android:drawableTint="@color/colorPrimary"
+        android:enabled="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:inputType="none"
+        android:textColor="@color/colorPrimaryDark" />
+
+  </com.google.android.material.textfield.TextInputLayout>
+
+  <Space
+      android:layout_width="wrap_content"
+      android:layout_height="8dp" />
+
+  <com.google.android.material.textfield.TextInputLayout
+      android:id="@+id/timeInputLayout"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="center_vertical"
+      android:layout_weight="1">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/timeEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:clickable="true"
+        android:cursorVisible="false"
+        android:drawableEnd="@drawable/ic_time"
+        android:drawableTint="@color/colorPrimary"
+        android:enabled="true"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:inputType="none"
+        android:textColor="@color/colorPrimaryDark" />
+
+  </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>

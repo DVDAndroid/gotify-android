@@ -6,6 +6,8 @@ import com.github.gotify.api.Callback
 import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Message
 import com.github.gotify.client.model.PagedMessages
+import org.threeten.bp.OffsetDateTime
+import org.threeten.bp.format.DateTimeFormatter
 import org.tinylog.kotlin.Logger
 
 internal class MessageRequester(private val messageApi: MessageApi) {
@@ -39,6 +41,21 @@ internal class MessageRequester(private val messageApi: MessageApi) {
             true
         } catch (e: ApiException) {
             Logger.error(e, "Could not delete messages")
+            false
+        }
+    }
+
+    fun postponeMessage(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
+        return try {
+            if (postponeAt == null) {
+                messageApi.unpostponeMessage(messageId).enqueue(Callback.call())
+                return true
+            }
+
+            val rfc3339String = postponeAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"))
+            messageApi.postponeMessage(messageId, rfc3339String).enqueue(Callback.call())
+            true
+        } catch (e: ApiException) {
             false
         }
     }
