@@ -3,7 +3,12 @@ package com.github.gotify
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.text.format.DateUtils
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -62,6 +67,11 @@ internal object Utils {
                 target
             }
         }
+    }
+
+    fun openUrl(context: Context, url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(intent)
     }
 
     fun toDrawable(drawableReceiver: DrawableReceiver): Target {
