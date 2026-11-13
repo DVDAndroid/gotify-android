@@ -49,6 +49,7 @@ import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Application
 import com.github.gotify.client.model.Message
 import com.github.gotify.databinding.ActivityMessagesBinding
+import com.github.gotify.dialog.PostponeMessageDialog
 import com.github.gotify.init.InitializationActivity
 import com.github.gotify.log.LogsActivity
 import com.github.gotify.login.LoginActivity
@@ -61,6 +62,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
 import com.google.android.material.snackbar.Snackbar
+import java.time.OffsetDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.tinylog.kotlin.Logger
@@ -82,8 +84,14 @@ internal class MessagesActivity :
                 messageJson,
                 Message::class.java
             )
-            launchCoroutine {
-                addSingleMessage(message)
+            if (message.postponedAt != null) {
+                // A postponed message is pushed again with its old id, which addSingleMessage
+                // skips as already processed. Reload to get the current state from the server.
+                onRefresh()
+            } else {
+                launchCoroutine {
+                    addSingleMessage(message)
+                }
             }
         }
     }
@@ -105,10 +113,10 @@ internal class MessagesActivity :
         listMessageAdapter = ListMessageAdapter(
             this,
             viewModel.settings,
-            CoilInstance.get(this)
-        ) { message ->
-            scheduleDeletion(message)
-        }
+            CoilInstance.get(this),
+            delete = { message -> scheduleDeletion(message) },
+            postpone = { message -> postponeDialog(message) }
+        )
         addBackPressCallback()
 
         messagesView.addItemDecoration(dividerItemDecoration)
@@ -362,6 +370,32 @@ internal class MessagesActivity :
         messages.deleteLocal(message)
         adapter.updateList(messages[viewModel.appId])
         showDeletionSnackbar()
+    }
+
+    private fun postponeDialog(message: Message) {
+        PostponeMessageDialog(
+            this,
+            layoutInflater,
+            onPositiveButtonClick = { at -> postpone(message, at) },
+            onNeutralButtonClick = { postpone(message, null) },
+            currentPostponement = message.postponedAt
+        ).show()
+    }
+
+    private fun postpone(message: Message, at: OffsetDateTime?) {
+        launchCoroutine {
+            withContext(Dispatchers.Main) {
+                startLoading()
+            }
+            if (viewModel.messages.postpone(message.id, at)) {
+                onRefresh()
+            } else {
+                withContext(Dispatchers.Main) {
+                    stopLoading()
+                    Utils.showSnackBar(this@MessagesActivity, getString(R.string.postpone_failed))
+                }
+            }
+        }
     }
 
     private fun undoDelete() {

@@ -2,6 +2,7 @@ package com.github.gotify.messages.provider
 
 import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Message
+import java.time.OffsetDateTime
 
 internal class MessageFacade(api: MessageApi, private val applicationHolder: ApplicationHolder) {
     private val requester = MessageRequester(api)
@@ -74,4 +75,9 @@ internal class MessageFacade(api: MessageApi, private val applicationHolder: App
 
     @Synchronized
     fun canLoadMore(appId: Long): Boolean = state.state(appId).hasNext
+
+    @Synchronized
+    fun postpone(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
+        return requester.postponeMessage(messageId, postponeAt)
+    }
 }

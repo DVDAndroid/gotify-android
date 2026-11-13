@@ -133,4 +133,10 @@
     <string name="notification_channel_title_low">Low priority messages (1–3)</string>
     <string name="notification_channel_title_normal">Normal priority messages (4–7)</string>
     <string name="notification_channel_title_high">High priority messages (>7)</string>
+    <string name="postpone_message">Postpone message</string>
+    <string name="postpone">Postpone</string>
+    <string name="postpone_remove">Remove postponement</string>
+    <string name="postpone_select_date">Select date</string>
+    <string name="postpone_select_time">Select time</string>
+    <string name="postpone_failed">Postponing failed</string>
 </resources>

@@ -13,6 +13,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -37,7 +38,8 @@ internal class ListMessageAdapter(
     private val context: Context,
     private val settings: Settings,
     private val imageLoader: ImageLoader,
-    private val delete: Delete
+    private val delete: Delete,
+    private val postpone: Postpone
 ) : ListAdapter<MessageWithImage, ListMessageAdapter.ViewHolder>(DiffCallback) {
     private val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val markwon: Markwon = MarkwonFactory.createForMessage(context, imageLoader)
@@ -107,6 +109,28 @@ internal class ListMessageAdapter(
         holder.delete.setOnClickListener {
             delete.delete(message.message)
         }
+
+        val postponedAt = message.message.postponedAt
+        if (postponedAt == null) {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_schedule)
+            )
+            holder.postpone.clearColorFilter()
+        } else if (postponedAt.isAfter(OffsetDateTime.now())) {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_update)
+            )
+            holder.postpone.setColorFilter(context.getColor(R.color.postpone_future))
+        } else {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_history)
+            )
+            holder.postpone.setColorFilter(context.getColor(R.color.postpone_past))
+        }
+
+        holder.postpone.setOnClickListener {
+            postpone.postpone(message.message)
+        }
     }
 
     override fun getItemId(position: Int): Long {
@@ -127,6 +151,7 @@ internal class ListMessageAdapter(
         lateinit var title: TextView
         lateinit var date: TextView
         lateinit var delete: ImageButton
+        lateinit var postpone: ImageButton
 
         private var relativeTimeFormat = true
         private lateinit var dateTime: OffsetDateTime
@@ -139,12 +164,14 @@ internal class ListMessageAdapter(
                 title = binding.messageTitle
                 date = binding.messageDate
                 delete = binding.messageDelete
+                postpone = binding.messagePostpone
             } else if (binding is MessageItemCompactBinding) {
                 image = binding.messageImage
                 message = binding.messageText
                 title = binding.messageTitle
                 date = binding.messageDate
                 delete = binding.messageDelete
+                postpone = binding.messagePostpone
             }
         }
 
@@ -213,5 +240,9 @@ internal class ListMessageAdapter(
 
     fun interface Delete {
         fun delete(message: Message)
+    }
+
+    fun interface Postpone {
+        fun postpone(message: Message)
     }
 }

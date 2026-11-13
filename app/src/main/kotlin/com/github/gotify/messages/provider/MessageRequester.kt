@@ -6,6 +6,8 @@ import com.github.gotify.api.Callback
 import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Message
 import com.github.gotify.client.model.PagedMessages
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import org.tinylog.kotlin.Logger
 
 internal class MessageRequester(private val messageApi: MessageApi) {
@@ -43,7 +45,27 @@ internal class MessageRequester(private val messageApi: MessageApi) {
         }
     }
 
+    /** Postpones the message to [postponeAt] or, if it is null, removes the postponement. */
+    fun postponeMessage(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
+        return try {
+            if (postponeAt == null) {
+                Logger.info("Removing postponement of message with id $messageId")
+                Api.execute(messageApi.deleteMessagePostponement(messageId))
+            } else {
+                Logger.info("Postponing message with id $messageId to $postponeAt")
+                // The server parses RFC3339 and requires the seconds, OffsetDateTime.toString()
+                // omits them when they are zero.
+                Api.execute(messageApi.postponeMessage(messageId, postponeAt.format(RFC3339)))
+            }
+            true
+        } catch (e: ApiException) {
+            Logger.error(e, "Could not postpone message")
+            false
+        }
+    }
+
     companion object {
         private const val LIMIT = 100
+        private val RFC3339 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
     }
 }

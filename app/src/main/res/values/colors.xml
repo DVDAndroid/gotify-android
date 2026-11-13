@@ -8,4 +8,6 @@
     <color name="swipeBackground">#E74C3C</color>
     <color name="swipeIcon">#FFFFFF</color>
     <color name="hyperLink">#FF7F50</color>
+    <color name="postpone_future">#03a9f4</color>
+    <color name="postpone_past">#ffc107</color>
 </resources>
