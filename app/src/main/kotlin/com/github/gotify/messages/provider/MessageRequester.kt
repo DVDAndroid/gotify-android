@@ -13,9 +13,9 @@ internal class MessageRequester(private val messageApi: MessageApi) {
         return try {
             Logger.info("Loading more messages for ${state.appId}")
             if (MessageState.ALL_MESSAGES == state.appId) {
-                Api.execute(messageApi.getMessages(LIMIT, state.nextSince))
+                Api.execute(messageApi.getMessages(LIMIT, state.nextSince, null))
             } else {
-                Api.execute(messageApi.getAppMessages(state.appId, LIMIT, state.nextSince))
+                Api.execute(messageApi.getAppMessages(state.appId, LIMIT, state.nextSince, null))
             }
         } catch (apiException: ApiException) {
             Logger.error(apiException, "failed requesting messages")

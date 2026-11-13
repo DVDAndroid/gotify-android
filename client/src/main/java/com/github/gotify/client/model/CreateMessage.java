@@ -21,6 +21,7 @@ import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,6 +44,11 @@ public class CreateMessage {
   @SerializedName(SERIALIZED_NAME_MESSAGE)
   @javax.annotation.Nonnull
   private String message;
+
+  public static final String SERIALIZED_NAME_POSTPONED_AT = "postponed_at";
+  @SerializedName(SERIALIZED_NAME_POSTPONED_AT)
+  @javax.annotation.Nullable
+  private OffsetDateTime postponedAt;
 
   public static final String SERIALIZED_NAME_PRIORITY = "priority";
   @SerializedName(SERIALIZED_NAME_PRIORITY)
@@ -128,6 +134,27 @@ public class CreateMessage {
     this.message = message;
   }
 
+  public CreateMessage postponedAt(@javax.annotation.Nullable OffsetDateTime postponedAt) {
+    
+    this.postponedAt = postponedAt;
+    return this;
+  }
+
+  /**
+   * The date the message is postponed to. The message is pushed to clients at this date.
+   * @return postponedAt
+   */
+  @javax.annotation.Nullable
+
+  public OffsetDateTime getPostponedAt() {
+    return postponedAt;
+  }
+
+
+  public void setPostponedAt(@javax.annotation.Nullable OffsetDateTime postponedAt) {
+    this.postponedAt = postponedAt;
+  }
+
   public CreateMessage priority(@javax.annotation.Nullable Long priority) {
     
     this.priority = priority;
@@ -182,13 +209,14 @@ public class CreateMessage {
     return Objects.equals(this.appid, createMessage.appid) &&
         Objects.equals(this.extras, createMessage.extras) &&
         Objects.equals(this.message, createMessage.message) &&
+        Objects.equals(this.postponedAt, createMessage.postponedAt) &&
         Objects.equals(this.priority, createMessage.priority) &&
         Objects.equals(this.title, createMessage.title);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(appid, extras, message, priority, title);
+    return Objects.hash(appid, extras, message, postponedAt, priority, title);
   }
 
   @Override
@@ -198,6 +226,7 @@ public class CreateMessage {
     sb.append("    appid: ").append(toIndentedString(appid)).append("\n");
     sb.append("    extras: ").append(toIndentedString(extras)).append("\n");
     sb.append("    message: ").append(toIndentedString(message)).append("\n");
+    sb.append("    postponedAt: ").append(toIndentedString(postponedAt)).append("\n");
     sb.append("    priority: ").append(toIndentedString(priority)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("}");

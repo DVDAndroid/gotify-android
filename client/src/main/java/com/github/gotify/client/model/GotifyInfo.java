@@ -27,10 +27,25 @@ import java.io.IOException;
  */
 @javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.19.0")
 public class GotifyInfo {
+  public static final String SERIALIZED_NAME_LOCAL_AUTH = "localAuth";
+  @SerializedName(SERIALIZED_NAME_LOCAL_AUTH)
+  @javax.annotation.Nonnull
+  private Boolean localAuth;
+
   public static final String SERIALIZED_NAME_OIDC = "oidc";
   @SerializedName(SERIALIZED_NAME_OIDC)
   @javax.annotation.Nonnull
   private Boolean oidc;
+
+  public static final String SERIALIZED_NAME_OIDC_AUTO_REDIRECT = "oidcAutoRedirect";
+  @SerializedName(SERIALIZED_NAME_OIDC_AUTO_REDIRECT)
+  @javax.annotation.Nonnull
+  private Boolean oidcAutoRedirect;
+
+  public static final String SERIALIZED_NAME_OIDC_IDP_NAME = "oidcIdpName";
+  @SerializedName(SERIALIZED_NAME_OIDC_IDP_NAME)
+  @javax.annotation.Nonnull
+  private String oidcIdpName;
 
   public static final String SERIALIZED_NAME_REGISTER = "register";
   @SerializedName(SERIALIZED_NAME_REGISTER)
@@ -43,6 +58,27 @@ public class GotifyInfo {
   private String version;
 
   public GotifyInfo() {
+  }
+
+  public GotifyInfo localAuth(@javax.annotation.Nonnull Boolean localAuth) {
+    
+    this.localAuth = localAuth;
+    return this;
+  }
+
+  /**
+   * If local authentication is enabled.
+   * @return localAuth
+   */
+  @javax.annotation.Nonnull
+
+  public Boolean getLocalAuth() {
+    return localAuth;
+  }
+
+
+  public void setLocalAuth(@javax.annotation.Nonnull Boolean localAuth) {
+    this.localAuth = localAuth;
   }
 
   public GotifyInfo oidc(@javax.annotation.Nonnull Boolean oidc) {
@@ -64,6 +100,48 @@ public class GotifyInfo {
 
   public void setOidc(@javax.annotation.Nonnull Boolean oidc) {
     this.oidc = oidc;
+  }
+
+  public GotifyInfo oidcAutoRedirect(@javax.annotation.Nonnull Boolean oidcAutoRedirect) {
+    
+    this.oidcAutoRedirect = oidcAutoRedirect;
+    return this;
+  }
+
+  /**
+   * If the WebUI should automatically redirect to the OIDC identity provider instead of showing the login page.
+   * @return oidcAutoRedirect
+   */
+  @javax.annotation.Nonnull
+
+  public Boolean getOidcAutoRedirect() {
+    return oidcAutoRedirect;
+  }
+
+
+  public void setOidcAutoRedirect(@javax.annotation.Nonnull Boolean oidcAutoRedirect) {
+    this.oidcAutoRedirect = oidcAutoRedirect;
+  }
+
+  public GotifyInfo oidcIdpName(@javax.annotation.Nonnull String oidcIdpName) {
+    
+    this.oidcIdpName = oidcIdpName;
+    return this;
+  }
+
+  /**
+   * Name of the OIDC identity provider.
+   * @return oidcIdpName
+   */
+  @javax.annotation.Nonnull
+
+  public String getOidcIdpName() {
+    return oidcIdpName;
+  }
+
+
+  public void setOidcIdpName(@javax.annotation.Nonnull String oidcIdpName) {
+    this.oidcIdpName = oidcIdpName;
   }
 
   public GotifyInfo register(@javax.annotation.Nonnull Boolean register) {
@@ -117,21 +195,27 @@ public class GotifyInfo {
       return false;
     }
     GotifyInfo gotifyInfo = (GotifyInfo) o;
-    return Objects.equals(this.oidc, gotifyInfo.oidc) &&
+    return Objects.equals(this.localAuth, gotifyInfo.localAuth) &&
+        Objects.equals(this.oidc, gotifyInfo.oidc) &&
+        Objects.equals(this.oidcAutoRedirect, gotifyInfo.oidcAutoRedirect) &&
+        Objects.equals(this.oidcIdpName, gotifyInfo.oidcIdpName) &&
         Objects.equals(this.register, gotifyInfo.register) &&
         Objects.equals(this.version, gotifyInfo.version);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(oidc, register, version);
+    return Objects.hash(localAuth, oidc, oidcAutoRedirect, oidcIdpName, register, version);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class GotifyInfo {\n");
+    sb.append("    localAuth: ").append(toIndentedString(localAuth)).append("\n");
     sb.append("    oidc: ").append(toIndentedString(oidc)).append("\n");
+    sb.append("    oidcAutoRedirect: ").append(toIndentedString(oidcAutoRedirect)).append("\n");
+    sb.append("    oidcIdpName: ").append(toIndentedString(oidcIdpName)).append("\n");
     sb.append("    register: ").append(toIndentedString(register)).append("\n");
     sb.append("    version: ").append(toIndentedString(version)).append("\n");
     sb.append("}");

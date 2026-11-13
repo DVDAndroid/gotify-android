@@ -24,7 +24,7 @@ import java.util.Set;
 public interface UserApi {
   /**
    * Create a user.
-   * With enabled registration: non admin users can be created without authentication. With disabled registrations: users can only be created by admin users.  Requires elevated authentication.
+   * With enabled registration: non admin users can be created without authentication. With disabled registrations: users can only be created by admin users with an elevated session.  Requires elevated authentication.
    * @param body the user to add (required)
    * @return Call&lt;User&gt;
    */

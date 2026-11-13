@@ -58,6 +58,17 @@ public interface MessageApi {
   );
 
   /**
+   * Remove the postponement of a message.
+   * 
+   * @param id the message id (required)
+   * @return Call&lt;Void&gt;
+   */
+  @DELETE("message/{id}/postpone")
+  Call<Void> deleteMessagePostponement(
+    @retrofit2.http.Path("id") Long id
+  );
+
+  /**
    * Delete all messages.
    * 
    * @return Call&lt;Void&gt;
@@ -72,11 +83,12 @@ public interface MessageApi {
    * @param id the application id (required)
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
+   * @param postponed return all (all), only postponed (true) or only not postponed (false) messages (optional)
    * @return Call&lt;PagedMessages&gt;
    */
   @GET("application/{id}/message")
   Call<PagedMessages> getAppMessages(
-    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since
+    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since, @retrofit2.http.Query("postponed") String postponed
   );
 
   /**
@@ -84,11 +96,24 @@ public interface MessageApi {
    * 
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
+   * @param postponed return all (all), only postponed (true) or only not postponed (false) messages (optional)
    * @return Call&lt;PagedMessages&gt;
    */
   @GET("message")
   Call<PagedMessages> getMessages(
-    @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since
+    @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since, @retrofit2.http.Query("postponed") String postponed
+  );
+
+  /**
+   * Postpone a message.
+   * 
+   * @param id the message id (required)
+   * @param at the date to postpone the message to, in RFC3339 format with seconds, e.g. 2026-11-13T10:00:00+01:00. Must be in the future. (required)
+   * @return Call&lt;Void&gt;
+   */
+  @POST("message/{id}/postpone")
+  Call<Void> postponeMessage(
+    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("at") String at
   );
 
   /**

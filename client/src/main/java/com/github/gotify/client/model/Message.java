@@ -55,6 +55,11 @@ public class Message {
   @javax.annotation.Nonnull
   private String message;
 
+  public static final String SERIALIZED_NAME_POSTPONED_AT = "postponed_at";
+  @SerializedName(SERIALIZED_NAME_POSTPONED_AT)
+  @javax.annotation.Nullable
+  private OffsetDateTime postponedAt;
+
   public static final String SERIALIZED_NAME_PRIORITY = "priority";
   @SerializedName(SERIALIZED_NAME_PRIORITY)
   @javax.annotation.Nullable
@@ -168,6 +173,27 @@ public class Message {
     this.message = message;
   }
 
+  public Message postponedAt(@javax.annotation.Nullable OffsetDateTime postponedAt) {
+    
+    this.postponedAt = postponedAt;
+    return this;
+  }
+
+  /**
+   * The date the message is postponed to. Messages are pushed to clients at this date.
+   * @return postponedAt
+   */
+  @javax.annotation.Nullable
+
+  public OffsetDateTime getPostponedAt() {
+    return postponedAt;
+  }
+
+
+  public void setPostponedAt(@javax.annotation.Nullable OffsetDateTime postponedAt) {
+    this.postponedAt = postponedAt;
+  }
+
   public Message priority(@javax.annotation.Nullable Long priority) {
     
     this.priority = priority;
@@ -224,13 +250,14 @@ public class Message {
         Objects.equals(this.extras, message.extras) &&
         Objects.equals(this.id, message.id) &&
         Objects.equals(this.message, message.message) &&
+        Objects.equals(this.postponedAt, message.postponedAt) &&
         Objects.equals(this.priority, message.priority) &&
         Objects.equals(this.title, message.title);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(appid, date, extras, id, message, priority, title);
+    return Objects.hash(appid, date, extras, id, message, postponedAt, priority, title);
   }
 
   @Override
@@ -242,6 +269,7 @@ public class Message {
     sb.append("    extras: ").append(toIndentedString(extras)).append("\n");
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    message: ").append(toIndentedString(message)).append("\n");
+    sb.append("    postponedAt: ").append(toIndentedString(postponedAt)).append("\n");
     sb.append("    priority: ").append(toIndentedString(priority)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("}");

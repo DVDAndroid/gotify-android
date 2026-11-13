@@ -81,7 +81,7 @@ public class Paging {
 
 
   /**
-   * The request url for the next page. Empty/Null when no next page is available.
+   * The relative path for the next page. Empty/Null when no next page is available. Should be combined with the gotify base url.
    * @return next
    */
   @javax.annotation.Nullable
