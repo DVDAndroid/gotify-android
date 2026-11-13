@@ -94,6 +94,16 @@ internal class ListMessageAdapter(
         holder.setDateTime(message.message.date, timeFormat == timeFormatRelative)
         holder.date.setOnClickListener { holder.switchTimeFormat() }
 
+        // views are recycled: always reset the listener, otherwise a row without url would open
+        // the url of the message that was previously bound to it
+        val clickUrl = Extras.getNotificationUrl(message.message)
+        if (clickUrl != null) {
+            holder.itemView.setOnClickListener { Utils.openUrl(context, clickUrl) }
+        } else {
+            holder.itemView.setOnClickListener(null)
+            holder.itemView.isClickable = false
+        }
+
         holder.delete.setOnClickListener {
             delete.delete(message.message)
         }

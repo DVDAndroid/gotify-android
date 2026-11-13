@@ -3,10 +3,12 @@ package com.github.gotify
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.text.format.DateUtils
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import coil.target.Target
 import com.github.gotify.client.JSON
@@ -62,6 +64,10 @@ internal object Utils {
                 target
             }
         }
+    }
+
+    fun openUrl(context: Context, url: String) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
 
     fun toDrawable(drawableReceiver: DrawableReceiver): Target {

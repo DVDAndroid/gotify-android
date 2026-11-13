@@ -356,14 +356,7 @@ internal class WebSocketService : Service() {
             startActivity(onReceiveIntent)
         }
 
-        val url = Extras.getNestedValue(
-            String::class.java,
-            extras,
-            "client::notification",
-            "click",
-            "url"
-        )
-
+        val url = Extras.getNotificationUrl(extras)
         if (url != null) {
             intent = Intent(Intent.ACTION_VIEW)
             intent.data = url.toUri()
