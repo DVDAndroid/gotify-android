@@ -2,8 +2,7 @@ package com.github.gotify.messages.provider
 
 import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Message
-import org.threeten.bp.OffsetDateTime
-import java.util.Date
+import java.time.OffsetDateTime
 
 internal class MessageFacade(api: MessageApi, private val applicationHolder: ApplicationHolder) {
     private val requester = MessageRequester(api)
@@ -81,5 +80,4 @@ internal class MessageFacade(api: MessageApi, private val applicationHolder: App
     fun postpone(messageId: Long, postponeAt: OffsetDateTime?): Boolean {
         return requester.postponeMessage(messageId, postponeAt)
     }
-
 }

@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.text.format.DateUtils
 import android.text.util.Linkify
 import android.view.LayoutInflater
@@ -32,15 +31,15 @@ import com.github.gotify.databinding.MessageItemCompactBinding
 import com.github.gotify.messages.provider.MessageWithImage
 import io.noties.markwon.Markwon
 import java.text.DateFormat
+import java.time.OffsetDateTime
 import java.util.Date
-import org.threeten.bp.OffsetDateTime
 
 internal class ListMessageAdapter(
     private val context: Context,
     private val settings: Settings,
     private val imageLoader: ImageLoader,
     private val delete: Delete,
-    private val postpone: Postpone,
+    private val postpone: Postpone
 ) : ListAdapter<MessageWithImage, ListMessageAdapter.ViewHolder>(DiffCallback) {
     private val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val markwon: Markwon = MarkwonFactory.createForMessage(context, imageLoader)
@@ -97,10 +96,14 @@ internal class ListMessageAdapter(
         holder.setDateTime(message.message.date, timeFormat == timeFormatRelative)
         holder.date.setOnClickListener { holder.switchTimeFormat() }
 
-        Extras.getNotificationUrl(message.message)?.let { url ->
-            holder.itemView.setOnClickListener {
-                Utils.openUrl(context, url)
-            }
+        // views are recycled: always reset the listener, otherwise a row without url would open
+        // the url of the message that was previously bound to it
+        val clickUrl = Extras.getNotificationUrl(message.message)
+        if (clickUrl != null) {
+            holder.itemView.setOnClickListener { Utils.openUrl(context, clickUrl) }
+        } else {
+            holder.itemView.setOnClickListener(null)
+            holder.itemView.isClickable = false
         }
 
         holder.delete.setOnClickListener {
@@ -108,14 +111,21 @@ internal class ListMessageAdapter(
         }
 
         val postponedAt = message.message.postponedAt
-        if (postponedAt != null) {
-            if (postponedAt.isAfter(OffsetDateTime.now())) {
-                holder.postpone.setImageDrawable(AppCompatResources.getDrawable(context, R.drawable.ic_update))
-                holder.postpone.setColorFilter(context.getColor(R.color.postpone_future))
-            } else {
-                holder.postpone.setImageDrawable(AppCompatResources.getDrawable(context, R.drawable.ic_history))
-                holder.postpone.setColorFilter(context.getColor(R.color.postpone_past))
-            }
+        if (postponedAt == null) {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_schedule)
+            )
+            holder.postpone.clearColorFilter()
+        } else if (postponedAt.isAfter(OffsetDateTime.now())) {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_update)
+            )
+            holder.postpone.setColorFilter(context.getColor(R.color.postpone_future))
+        } else {
+            holder.postpone.setImageDrawable(
+                AppCompatResources.getDrawable(context, R.drawable.ic_history)
+            )
+            holder.postpone.setColorFilter(context.getColor(R.color.postpone_past))
         }
 
         holder.postpone.setOnClickListener {
@@ -235,5 +245,4 @@ internal class ListMessageAdapter(
     fun interface Postpone {
         fun postpone(message: Message)
     }
-
 }

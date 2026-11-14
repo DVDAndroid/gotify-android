@@ -7,6 +7,7 @@ import retrofit2.http.*;
 
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okhttp3.MultipartBody;
 
 import com.github.gotify.client.model.Error;
 import com.github.gotify.client.model.PluginConf;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface PluginApi {
   /**
@@ -23,9 +25,6 @@ public interface PluginApi {
    * @param id the plugin id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @POST("plugin/{id}/disable")
   Call<Void> disablePlugin(
     @retrofit2.http.Path("id") Long id
@@ -37,9 +36,6 @@ public interface PluginApi {
    * @param id the plugin id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @POST("plugin/{id}/enable")
   Call<Void> enablePlugin(
     @retrofit2.http.Path("id") Long id
@@ -51,9 +47,6 @@ public interface PluginApi {
    * @param id the plugin id (required)
    * @return Call&lt;Object&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("plugin/{id}/config")
   Call<Object> getPluginConfig(
     @retrofit2.http.Path("id") Long id
@@ -65,9 +58,6 @@ public interface PluginApi {
    * @param id the plugin id (required)
    * @return Call&lt;String&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("plugin/{id}/display")
   Call<String> getPluginDisplay(
     @retrofit2.http.Path("id") Long id
@@ -78,9 +68,6 @@ public interface PluginApi {
    * 
    * @return Call&lt;List&lt;PluginConf&gt;&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("plugin")
   Call<List<PluginConf>> getPlugins();
     
@@ -91,9 +78,6 @@ public interface PluginApi {
    * @param id the plugin id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/x-yaml"
-  })
   @POST("plugin/{id}/config")
   Call<Void> updatePluginConfig(
     @retrofit2.http.Path("id") Long id

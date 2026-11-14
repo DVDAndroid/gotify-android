@@ -9,7 +9,7 @@ import org.tinylog.kotlin.Logger
 
 internal class MissedMessageUtil(private val api: MessageApi) {
     fun lastReceivedMessage(acceptID: (Long) -> Unit) {
-        api.getMessages(1, 0L).enqueue(
+        api.getMessages(1, 0L, null).enqueue(
             Callback.call(
                 onSuccess = Callback.SuccessBody { messages ->
                     if (messages.messages.size == 1) {
@@ -28,12 +28,12 @@ internal class MissedMessageUtil(private val api: MessageApi) {
         try {
             var since: Long? = null
             while (true) {
-                val pagedMessages = Api.execute(api.getMessages(10, since))
+                val pagedMessages = Api.execute(api.getMessages(10, since, null))
                 val messages = pagedMessages.messages
                 val filtered = filter(messages, till)
                 result.addAll(filtered)
                 if (messages.size != filtered.size ||
-                    messages.size == 0 ||
+                    messages.isEmpty() ||
                     pagedMessages.paging.next == null
                 ) {
                     break

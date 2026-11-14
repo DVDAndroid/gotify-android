@@ -1,5 +1,6 @@
 package com.github.gotify.messages
 
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,7 +9,6 @@ import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
@@ -21,6 +21,8 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener
 import androidx.lifecycle.ViewModelProvider
@@ -34,17 +36,17 @@ import com.github.gotify.BuildConfig
 import com.github.gotify.CoilInstance
 import com.github.gotify.MissedMessageUtil
 import com.github.gotify.R
+import com.github.gotify.Settings
 import com.github.gotify.Utils
 import com.github.gotify.Utils.launchCoroutine
 import com.github.gotify.api.Api
 import com.github.gotify.api.ApiException
-import com.github.gotify.api.Callback
 import com.github.gotify.api.ClientFactory
-import com.github.gotify.client.api.ApplicationApi
+import com.github.gotify.client.ApiClient
+import com.github.gotify.client.api.AuthApi
 import com.github.gotify.client.api.ClientApi
 import com.github.gotify.client.api.MessageApi
 import com.github.gotify.client.model.Application
-import com.github.gotify.client.model.Client
 import com.github.gotify.client.model.Message
 import com.github.gotify.databinding.ActivityMessagesBinding
 import com.github.gotify.dialog.PostponeMessageDialog
@@ -56,14 +58,13 @@ import com.github.gotify.messages.provider.MessageWithImage
 import com.github.gotify.service.WebSocketService
 import com.github.gotify.settings.SettingsActivity
 import com.github.gotify.sharing.ShareActivity
-import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback
 import com.google.android.material.snackbar.Snackbar
+import java.time.OffsetDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.threeten.bp.OffsetDateTime
 import org.tinylog.kotlin.Logger
 
 internal class MessagesActivity :
@@ -78,8 +79,19 @@ internal class MessagesActivity :
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            launchCoroutine {
+            val messageJson = intent.getStringExtra("message")
+            val message = Utils.JSON.fromJson(
+                messageJson,
+                Message::class.java
+            )
+            if (message.postponedAt != null) {
+                // A postponed message is pushed again with its old id, which addSingleMessage
+                // skips as already processed. Reload to get the current state from the server.
                 onRefresh()
+            } else {
+                launchCoroutine {
+                    addSingleMessage(message)
+                }
             }
         }
     }
@@ -103,7 +115,7 @@ internal class MessagesActivity :
             viewModel.settings,
             CoilInstance.get(this),
             delete = { message -> scheduleDeletion(message) },
-            postpone = { message -> postponeDialog(message) },
+            postpone = { message -> postponeDialog(message) }
         )
         addBackPressCallback()
 
@@ -181,13 +193,12 @@ internal class MessagesActivity :
                 if (message.image != null) {
                     listMessageAdapter.notifyItemChanged(index)
                 }
-                listMessageAdapter.notifyDataSetChanged()
             }
         }
     }
 
     private fun openDocumentation() {
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gotify.net/docs/pushmsg"))
+        val browserIntent = Intent(Intent.ACTION_VIEW, "https://gotify.net/docs/pushmsg".toUri())
         startActivity(browserIntent)
     }
 
@@ -308,6 +319,7 @@ internal class MessagesActivity :
     }
 
     override fun onResume() {
+        Logger.info("OnResume " + javaClass.simpleName)
         val context = applicationContext
         val nManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nManager.cancelAll()
@@ -316,6 +328,7 @@ internal class MessagesActivity :
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(receiver, filter, RECEIVER_EXPORTED)
         } else {
+            @SuppressLint("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
         launchCoroutine {
@@ -360,25 +373,29 @@ internal class MessagesActivity :
     }
 
     private fun postponeDialog(message: Message) {
-        val dialog = PostponeMessageDialog(
+        PostponeMessageDialog(
             this,
             layoutInflater,
-            onPositiveButtonClick = { at ->
-                launchCoroutine {
-                    postponeMessage(message, at)
-                    onRefresh()
+            onPositiveButtonClick = { at -> postpone(message, at) },
+            onNeutralButtonClick = { postpone(message, null) },
+            currentPostponement = message.postponedAt
+        ).show()
+    }
+
+    private fun postpone(message: Message, at: OffsetDateTime?) {
+        launchCoroutine {
+            withContext(Dispatchers.Main) {
+                startLoading()
+            }
+            if (viewModel.messages.postpone(message.id, at)) {
+                onRefresh()
+            } else {
+                withContext(Dispatchers.Main) {
+                    stopLoading()
+                    Utils.showSnackBar(this@MessagesActivity, getString(R.string.postpone_failed))
                 }
-            },
-            onNegativeButtonClick = null,
-            onNeutralButtonClick = {
-                launchCoroutine {
-                    removePostponement(message)
-                    onRefresh()
-                }
-            },
-            message.postponedAt,
-        )
-        dialog.show()
+            }
+        }
     }
 
     private fun undoDelete() {
@@ -415,9 +432,8 @@ internal class MessagesActivity :
         }
     }
 
-    private inner class SwipeToDeleteCallback(
-        private val adapter: ListMessageAdapter
-    ) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+    private inner class SwipeToDeleteCallback(private val adapter: ListMessageAdapter) :
+        ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
         private var icon: Drawable?
         private val background: ColorDrawable
 
@@ -431,7 +447,7 @@ internal class MessagesActivity :
                 icon = DrawableCompat.wrap(drawable.mutate())
                 DrawableCompat.setTint(icon!!, iconColorId)
             }
-            background = ColorDrawable(backgroundColorId)
+            background = backgroundColorId.toDrawable()
         }
 
         override fun onMove(
@@ -556,26 +572,11 @@ internal class MessagesActivity :
         if (item.itemId == R.id.action_delete_app) {
             MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.delete_app)
-                .setMessage(R.string.ack)
-                .setPositiveButton(R.string.yes) { _, _ -> deleteApp(viewModel.appId) }
-                .setNegativeButton(R.string.no, null)
+                .setMessage(R.string.delete_app_not_supported)
+                .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
         return super.onContextItemSelected(item)
-    }
-
-    private fun deleteApp(appId: Long) {
-        val settings = viewModel.settings
-        val client = ClientFactory.clientToken(settings)
-        client.createService(ApplicationApi::class.java)
-            .deleteApp(appId)
-            .enqueue(
-                Callback.callInUI(
-                    this,
-                    onSuccess = { refreshAll() },
-                    onError = { Utils.showSnackBar(this, getString(R.string.error_delete_app)) }
-                )
-            )
     }
 
     private suspend fun loadMore(appId: Long): List<MessageWithImage> {
@@ -622,47 +623,33 @@ internal class MessagesActivity :
         }
     }
 
-    private suspend fun postponeMessage(message: Message, at: OffsetDateTime) {
-        withContext(Dispatchers.Main) {
-            startLoading()
-        }
-        val success = viewModel.messages.postpone(message.id, at)
-        if (success) {
-            updateMessagesForApplication(false, viewModel.appId)
-        } else {
-            withContext(Dispatchers.Main) {
-                Utils.showSnackBar(this@MessagesActivity, "Postpone failed :(")
-            }
-        }
-    }
-
-    private suspend fun removePostponement(message: Message) {
-        withContext(Dispatchers.Main) {
-            startLoading()
-        }
-        val success = viewModel.messages.postpone(message.id, postponeAt = null)
-        if (success) {
-            updateMessagesForApplication(false, viewModel.appId)
-        } else {
-            withContext(Dispatchers.Main) {
-                Utils.showSnackBar(this@MessagesActivity, "Remove postponement failed :(")
-            }
-        }
-    }
-
     private fun deleteClientAndNavigateToLogin() {
         val settings = viewModel.settings
-        val api = ClientFactory.clientToken(settings).createService(ClientApi::class.java)
+        val tokenClient = ClientFactory.clientToken(settings)
         stopService(Intent(this@MessagesActivity, WebSocketService::class.java))
         try {
-            val clients = Api.execute(api.clients)
-            var currentClient: Client? = null
-            for (client in clients) {
-                if (client.token == settings.token) {
-                    currentClient = client
-                    break
-                }
+            Logger.info("Logging out...")
+            val authApi = tokenClient.createService(AuthApi::class.java)
+            Api.execute(authApi.logout())
+        } catch (e: ApiException) {
+            if (e.code == 404) {
+                Logger.info("Logout endpoint not available, falling back to client deletion")
+                deleteCurrentClient(tokenClient, settings)
+            } else {
+                Logger.error(e, "Could not logout")
             }
+        }
+
+        viewModel.settings.clear()
+        startActivity(Intent(this@MessagesActivity, LoginActivity::class.java))
+        finish()
+    }
+
+    private fun deleteCurrentClient(tokenClient: ApiClient, settings: Settings) {
+        val api = tokenClient.createService(ClientApi::class.java)
+        try {
+            val clients = Api.execute(api.clients)
+            val currentClient = clients.firstOrNull { it.token == settings.token }
             if (currentClient != null) {
                 Logger.info("Delete client with id " + currentClient.id)
                 Api.execute(api.deleteClient(currentClient.id))
@@ -672,10 +659,6 @@ internal class MessagesActivity :
         } catch (e: ApiException) {
             Logger.error(e, "Could not delete client")
         }
-
-        viewModel.settings.clear()
-        startActivity(Intent(this@MessagesActivity, LoginActivity::class.java))
-        finish()
     }
 
     private fun updateMessagesAndStopLoading(messageWithImages: List<MessageWithImage>) {

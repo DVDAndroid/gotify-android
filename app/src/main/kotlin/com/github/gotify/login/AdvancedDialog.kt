@@ -75,7 +75,7 @@ internal class AdvancedDialog(
         if (caCertPath == null) {
             showSelectCaCertificate()
         } else {
-            showRemoveCaCertificate(caCertCN!!)
+            showRemoveCaCertificate(caCertCN ?: "")
         }
         if (clientCertPath == null) {
             showSelectClientCertificate()

@@ -5,13 +5,13 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.preference.ListPreference
 import androidx.preference.ListPreferenceDialogFragmentCompat
 import androidx.preference.Preference
@@ -21,9 +21,12 @@ import androidx.preference.SwitchPreferenceCompat
 import com.github.gotify.R
 import com.github.gotify.Utils
 import com.github.gotify.databinding.SettingsActivityBinding
+import com.github.gotify.service.WebSocketService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
-internal class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
+internal class SettingsActivity :
+    AppCompatActivity(),
+    OnSharedPreferenceChangeListener {
     private lateinit var binding: SettingsActivityBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,6 +75,34 @@ internal class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeL
                     getString(R.string.setting_key_notification_channels)
                 )?.isEnabled = true
             }
+            findPreference<androidx.preference.EditTextPreference>(
+                getString(R.string.setting_key_reconnect_delay)
+            )?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, newValue ->
+                    val value = (newValue as String).trim().toIntOrNull() ?: 60
+                    if (value !in 5..1200) {
+                        Utils.showSnackBar(
+                            requireActivity(),
+                            "Please enter a value between 5 and 1200"
+                        )
+                        return@OnPreferenceChangeListener false
+                    }
+
+                    requestWebSocketRestart()
+                    true
+                }
+            findPreference<SwitchPreferenceCompat>(
+                getString(R.string.setting_key_exponential_backoff)
+            )?.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { _, _ ->
+                    requestWebSocketRestart()
+                    true
+                }
+        }
+
+        private fun requestWebSocketRestart() {
+            val intent = Intent(requireContext(), WebSocketService::class.java)
+            requireContext().startService(intent)
         }
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -126,7 +157,7 @@ internal class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeL
         private fun openSystemAlertWindowPermissionPage(): Boolean {
             Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${requireContext().packageName}")
+                "package:${requireContext().packageName}".toUri()
             ).apply {
                 startActivity(this)
             }

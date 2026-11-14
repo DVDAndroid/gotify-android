@@ -3,6 +3,7 @@ package com.github.gotify.messages.provider
 import com.github.gotify.client.model.Message
 import com.github.gotify.client.model.PagedMessages
 import kotlin.math.max
+import org.tinylog.kotlin.Logger
 
 internal class MessageStateHolder {
     @get:Synchronized
@@ -42,6 +43,12 @@ internal class MessageStateHolder {
 
     @Synchronized
     fun newMessage(message: Message) {
+        if (lastReceivedMessage >= message.id) {
+            Logger.warn {
+                "Skipping processing message with id ${message.id} as it's already processed (lastReceivedMessage: $lastReceivedMessage)"
+            }
+            return
+        }
         // If there is a message with pending deletion, its indices are going to change. To keep
         // them consistent the deletion is undone first and redone again after adding the new
         // message.

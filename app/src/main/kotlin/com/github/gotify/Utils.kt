@@ -4,14 +4,11 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.text.format.DateUtils
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import coil.target.Target
 import com.github.gotify.client.JSON
@@ -21,12 +18,12 @@ import java.net.MalformedURLException
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URL
+import java.time.OffsetDateTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import org.threeten.bp.OffsetDateTime
 import org.tinylog.kotlin.Logger
 
 internal object Utils {
@@ -70,8 +67,7 @@ internal object Utils {
     }
 
     fun openUrl(context: Context, url: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        context.startActivity(intent)
+        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
 
     fun toDrawable(drawableReceiver: DrawableReceiver): Target {

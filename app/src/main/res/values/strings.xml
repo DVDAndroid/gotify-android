@@ -2,7 +2,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="found_gotify_version">Found Gotify v%s</string>
+    <string name="found_gotify_version">Found Gotify %s</string>
     <string name="version_failed_status_code">Request to \'%1$s\' failed with status code %2$d</string>
     <string name="version_failed">Request to \'%1$s\' failed. %2$s.</string>
     <string name="wronguserpw">There is no user with this username and password</string>
@@ -25,7 +25,7 @@
     <string name="grouped_message">Received %d messages while being disconnected</string>
     <string name="delete_all">Delete all messages</string>
     <string name="delete_app">Delete application</string>
-    <string name="error_delete_app">Could not delete this app</string>
+    <string name="delete_app_not_supported">Deleting applications is not currently supported. Use the WebUI.</string>
     <string name="delete_logs">Delete logs</string>
     <string name="copy_logs">Copy logs</string>
     <string name="logs_copied">Logs copied</string>
@@ -50,6 +50,10 @@
     <string name="select_client_failed">Failed to read client cert: %s</string>
     <string name="certificate_found">Certificate found</string>
     <string name="login">Login</string>
+    <string name="login_with_oidc">Login with OIDC</string>
+    <string name="or">or</string>
+    <string name="oidc_authorize_failed">Failed to start OIDC login</string>
+    <string name="oidc_token_exchange_failed">OIDC login failed</string>
     <string name="check_url">Check URL</string>
     <string name="permissions_dialog_grant">Grant</string>
     <string name="permissions_notification_denied_temp">Gotify requires permission to display push notifications.</string>
@@ -96,6 +100,9 @@
     <string name="setting_key_intent_dialog_permission">intent_dialog_permission</string>
     <string name="setting_summary_intent_dialog_permission">To always show incoming intent URLs, give permission to show this app on top of other apps.</string>
     <string name="setting_summary_intent_dialog_permission_granted">Permission granted.</string>
+    <string name="setting_prompt_onreceive_intent">Confirm onReceive intents</string>
+    <string name="setting_key_prompt_onreceive_intent">prompt_onreceive_intent</string>
+    <string name="setting_summary_prompt_onreceive_intent">If enabled, a dialog is shown before onReceive.intentUrl is executed.</string>
     <string name="push_message">Push message</string>
     <string name="appListDescription">App:</string>
     <string name="priorityDescription">Priority:</string>
@@ -112,11 +119,14 @@
     <string name="action_dialog_button_cancel">Cancel</string>
 
     <string name="websocket_error">Error %s (see logs)</string>
-    <string name="websocket_reconnect">Trying to reconnect</string>
-    <plurals name="websocket_retry_interval">
-        <item quantity="one">in %d minute</item>
-        <item quantity="other">in %d minutes</item>
-    </plurals>
+    <string name="websocket_reconnect">Trying to reconnect in %s</string>
+    <string name="setting_reconnect_delay">Reconnect Delay (Seconds)</string>
+    <string name="setting_key_reconnect_delay">reconnect_delay</string>
+    <string name="setting_connection">Connection</string>
+    <string name="setting_reconnect_interval_summary">Delay between reconnect attempts</string>
+    <string name="setting_exponential_backoff_title">Exponential Backoff</string>
+    <string name="setting_exponential_backoff_summary">Exponentially increase the reconnect delay for each reconnect attempt</string>
+    <string name="setting_key_exponential_backoff">reconnect_exponential_backoff</string>
 
     <string name="notification_channel_title_foreground">Gotify foreground notification</string>
     <string name="notification_channel_title_min">Min priority messages (&lt;1)</string>
@@ -125,4 +135,8 @@
     <string name="notification_channel_title_high">High priority messages (>7)</string>
     <string name="postpone_message">Postpone message</string>
     <string name="postpone">Postpone</string>
+    <string name="postpone_remove">Remove postponement</string>
+    <string name="postpone_select_date">Select date</string>
+    <string name="postpone_select_time">Select time</string>
+    <string name="postpone_failed">Postponing failed</string>
 </resources>

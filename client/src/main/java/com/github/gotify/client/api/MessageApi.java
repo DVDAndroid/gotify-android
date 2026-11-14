@@ -7,7 +7,9 @@ import retrofit2.http.*;
 
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okhttp3.MultipartBody;
 
+import com.github.gotify.client.model.CreateMessage;
 import com.github.gotify.client.model.Error;
 import com.github.gotify.client.model.Message;
 import com.github.gotify.client.model.PagedMessages;
@@ -16,11 +18,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface MessageApi {
   /**
    * Create a message.
-   * __NOTE__: This API ONLY accepts an application token as authentication.
+   * __NOTE__: When authenticating with a client token or basic auth, the request body must include \&quot;appid\&quot; referencing an application owned by the authenticated user. When authenticating with an application token, the application is derived from the token and any \&quot;appid\&quot; in the body is ignored.
    * @param body the message to add (required)
    * @return Call&lt;Message&gt;
    */
@@ -29,18 +32,15 @@ public interface MessageApi {
   })
   @POST("message")
   Call<Message> createMessage(
-    @retrofit2.http.Body Message body
+    @retrofit2.http.Body CreateMessage body
   );
 
   /**
    * Delete all messages from a specific application.
-   *
+   * 
    * @param id the application id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @DELETE("application/{id}/message")
   Call<Void> deleteAppMessages(
     @retrofit2.http.Path("id") Long id
@@ -48,98 +48,81 @@ public interface MessageApi {
 
   /**
    * Deletes a message with an id.
-   *
+   * 
    * @param id the message id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @DELETE("message/{id}")
   Call<Void> deleteMessage(
     @retrofit2.http.Path("id") Long id
   );
 
   /**
-   * Delete all messages.
-   *
+   * Remove the postponement of a message.
+   * 
+   * @param id the message id (required)
    * @return Call&lt;Void&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
-  @DELETE("message")
-  Call<Void> deleteMessages();
-
-  /**
-   * Postpone message to date
-   *
-   * @param id the message id (required)
-   * @param date the date to postpone the message to (required)
-   */
-  @Headers({
-    "Content-Type:application/json"
-  })
-  @POST("message/{id}/postpone")
-  Call<Void> postponeMessage(
-    @retrofit2.http.Path("id") Long id,
-    @retrofit2.http.Query("at") String date
-  );
-
-  /**
-   * Delete message postponement
-   *
-   * @param id the message id (required)
-   */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @DELETE("message/{id}/postpone")
-  Call<Void> unpostponeMessage(
+  Call<Void> deleteMessagePostponement(
     @retrofit2.http.Path("id") Long id
   );
 
   /**
+   * Delete all messages.
+   * 
+   * @return Call&lt;Void&gt;
+   */
+  @DELETE("message")
+  Call<Void> deleteMessages();
+    
+
+  /**
    * Return all messages from a specific application.
-   *
+   * 
    * @param id the application id (required)
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
+   * @param postponed return all (all), only postponed (true) or only not postponed (false) messages (optional)
    * @return Call&lt;PagedMessages&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("application/{id}/message")
   Call<PagedMessages> getAppMessages(
-    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since
+    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since, @retrofit2.http.Query("postponed") String postponed
   );
 
   /**
    * Return all messages.
-   *
+   * 
    * @param limit the maximal amount of messages to return (optional, default to 100)
    * @param since return all messages with an ID less than this value (optional)
+   * @param postponed return all (all), only postponed (true) or only not postponed (false) messages (optional)
    * @return Call&lt;PagedMessages&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("message")
   Call<PagedMessages> getMessages(
-    @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since
+    @retrofit2.http.Query("limit") Integer limit, @retrofit2.http.Query("since") Long since, @retrofit2.http.Query("postponed") String postponed
+  );
+
+  /**
+   * Postpone a message.
+   * 
+   * @param id the message id (required)
+   * @param at the date to postpone the message to, in RFC3339 format with seconds, e.g. 2026-11-13T10:00:00+01:00. Must be in the future. (required)
+   * @return Call&lt;Void&gt;
+   */
+  @POST("message/{id}/postpone")
+  Call<Void> postponeMessage(
+    @retrofit2.http.Path("id") Long id, @retrofit2.http.Query("at") String at
   );
 
   /**
    * Websocket, return newly created messages.
-   *
+   * 
    * @return Call&lt;Message&gt;
    */
-  @Headers({
-    "Content-Type:application/json"
-  })
   @GET("stream")
   Call<Message> streamMessages();
-
+    
 
 }

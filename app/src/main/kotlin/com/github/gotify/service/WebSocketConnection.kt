@@ -1,6 +1,7 @@
 package com.github.gotify.service
 
 import android.app.AlarmManager
+import android.app.AlarmManager.OnAlarmListener
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,10 @@ import com.github.gotify.client.model.Message
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.pow
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -23,15 +28,18 @@ internal class WebSocketConnection(
     private val baseUrl: String,
     settings: SSLSettings,
     private val token: String?,
-    private val alarmManager: AlarmManager
+    private val alarmManager: AlarmManager,
+    private val reconnectDelay: Duration,
+    private val exponentialBackoff: Boolean
 ) {
     companion object {
         private val ID = AtomicLong(0)
     }
 
+    private var alarmManagerCallback: OnAlarmListener? = null
+    private var handlerCallback: Runnable? = null
     private val client: OkHttpClient
     private val reconnectHandler = Handler(Looper.getMainLooper())
-    private val reconnectCallback = Runnable { start() }
     private var errorCount = 0
 
     private var webSocket: WebSocket? = null
@@ -106,6 +114,13 @@ internal class WebSocketConnection(
 
     @Synchronized
     fun close() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            alarmManagerCallback?.run(alarmManager::cancel)
+            alarmManagerCallback = null
+        } else {
+            handlerCallback?.run(reconnectHandler::removeCallbacks)
+            handlerCallback = null
+        }
         if (webSocket != null) {
             webSocket?.close(1000, "")
             closed()
@@ -119,28 +134,36 @@ internal class WebSocketConnection(
         state = State.Disconnected
     }
 
+    fun scheduleReconnectNow(scheduleIn: Duration) = scheduleReconnect(ID.get(), scheduleIn)
+
     @Synchronized
-    fun scheduleReconnect(seconds: Long) {
+    fun scheduleReconnect(id: Long, scheduleIn: Duration) {
         if (state == State.Connecting || state == State.Connected) {
             return
         }
         state = State.Scheduled
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Logger.info("WebSocket: scheduling a restart in $seconds second(s) (via alarm manager)")
+            Logger.info("WebSocket: scheduling a restart in $scheduleIn (via alarm manager)")
             val future = Calendar.getInstance()
-            future.add(Calendar.SECOND, seconds.toInt())
+            future.add(Calendar.SECOND, scheduleIn.inWholeSeconds.toInt())
+
+            alarmManagerCallback?.run(alarmManager::cancel)
+            val cb = OnAlarmListener { syncExec(id) { start() } }
+            alarmManagerCallback = cb
             alarmManager.setExact(
                 AlarmManager.RTC_WAKEUP,
                 future.timeInMillis,
                 "reconnect-tag",
-                { start() },
+                cb,
                 null
             )
         } else {
-            Logger.info("WebSocket: scheduling a restart in $seconds second(s)")
-            reconnectHandler.removeCallbacks(reconnectCallback)
-            reconnectHandler.postDelayed(reconnectCallback, TimeUnit.SECONDS.toMillis(seconds))
+            Logger.info("WebSocket: scheduling a restart in $scheduleIn")
+            handlerCallback?.run(reconnectHandler::removeCallbacks)
+            val cb = Runnable { syncExec(id) { start() } }
+            handlerCallback = cb
+            reconnectHandler.postDelayed(cb, scheduleIn.inWholeMilliseconds)
         }
     }
 
@@ -187,10 +210,15 @@ internal class WebSocketConnection(
                 closed()
 
                 errorCount++
-                val minutes = (errorCount * 2 - 1).coerceAtMost(20)
 
-                onFailure.execute(response?.message ?: "unreachable", minutes)
-                scheduleReconnect(TimeUnit.MINUTES.toSeconds(minutes.toLong()))
+                var scheduleIn = reconnectDelay
+                if (exponentialBackoff) {
+                    scheduleIn *= 2.0.pow(errorCount - 1)
+                }
+                scheduleIn = scheduleIn.coerceIn(5.seconds..20.minutes)
+
+                onFailure.execute(response?.message ?: "unreachable", scheduleIn)
+                scheduleReconnect(id, scheduleIn)
             }
             super.onFailure(webSocket, t, response)
         }
@@ -204,7 +232,7 @@ internal class WebSocketConnection(
     }
 
     internal fun interface OnNetworkFailureRunnable {
-        fun execute(status: String, minutes: Int)
+        fun execute(status: String, reconnectIn: Duration)
     }
 
     internal enum class State {

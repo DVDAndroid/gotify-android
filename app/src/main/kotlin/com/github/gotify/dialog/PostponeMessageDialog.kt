@@ -10,56 +10,65 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import org.threeten.bp.Instant
-import org.threeten.bp.OffsetDateTime
-import org.threeten.bp.ZoneId
-import org.threeten.bp.ZoneOffset
-import org.threeten.bp.format.DateTimeFormatter
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
+/**
+ * Asks the user for a date and time to postpone a message to.
+ *
+ * Exactly one callback is invoked: [onPositiveButtonClick], [onNeutralButtonClick] (only offered
+ * if [currentPostponement] is set) or [onCancel], which is also invoked if the dialog is dismissed
+ * in any other way.
+ */
 internal class PostponeMessageDialog(
     private val activity: AppCompatActivity,
     private val layoutInflater: LayoutInflater,
     private val onPositiveButtonClick: (OffsetDateTime) -> Unit,
-    private val onNegativeButtonClick: (() -> Unit)? = null,
     private val onNeutralButtonClick: () -> Unit,
-    private val defaultDateTime: OffsetDateTime?,
+    private val onCancel: (() -> Unit)? = null,
+    private val currentPostponement: OffsetDateTime? = null
 ) {
     private lateinit var binding: PostponeMessageDialogBinding
-    private var dateTime: OffsetDateTime = defaultDateTime ?: OffsetDateTime.now(ZoneOffset.UTC)
+    private val zone = ZoneId.systemDefault()
 
-    init {
-        val utcDateTime = dateTime.withOffsetSameInstant(ZoneOffset.UTC)
-        val localDateTime = utcDateTime.atZoneSameInstant(ZoneId.systemDefault()).toOffsetDateTime()
+    // Wall clock time in the local time zone. Keeping it zone-less avoids wrong results around
+    // daylight saving changes when the user picks another date.
+    private var dateTime: LocalDateTime = initialDateTime()
 
-        dateTime = localDateTime.withSecond(0).withNano(0).plusMinutes(15)
+    private var handled = false
+
+    private fun initialDateTime(): LocalDateTime {
+        val now = OffsetDateTime.now()
+        // A postponement in the past is already delivered, offer a new time instead.
+        val base = currentPostponement?.takeIf { it.isAfter(now) }
+            ?: now.plusMinutes(DEFAULT_DELAY_MINUTES)
+        return base.atZoneSameInstant(zone).toLocalDateTime().withSecond(0).withNano(0)
     }
 
     private fun showDatePicker() {
-        val currentDateMillis = dateTime.toInstant().toEpochMilli()
-
-        val constraintsBuilder = CalendarConstraints.Builder()
-        val currentDate = Calendar.getInstance()
-        constraintsBuilder.setStart(currentDate.timeInMillis) // Start from current date
-        constraintsBuilder.setValidator(DateValidatorPointForward.now())
+        // MaterialDatePicker works with the selected day at midnight UTC.
+        val selection = dateTime.toLocalDate()
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
 
         val datePicker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText("Select Date")
-            .setSelection(currentDateMillis)
-            .setCalendarConstraints(constraintsBuilder.build())
+            .setTitleText(R.string.postpone_select_date)
+            .setSelection(selection)
+            .setCalendarConstraints(
+                CalendarConstraints.Builder()
+                    .setValidator(DateValidatorPointForward.now())
+                    .build()
+            )
             .build()
 
         datePicker.addOnPositiveButtonClickListener {
-            val selectedDateTime = OffsetDateTime.ofInstant(
-                Instant.ofEpochMilli(it),
-                ZoneId.of("UTC"),
-            ) // idk
-            dateTime = dateTime.withYear(selectedDateTime.year)
-                .withMonth(selectedDateTime.monthValue)
-                .withDayOfMonth(selectedDateTime.dayOfMonth)
+            val day = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+            dateTime = dateTime.with(day)
             formatText()
         }
 
@@ -68,7 +77,7 @@ internal class PostponeMessageDialog(
 
     private fun showTimePicker() {
         val timePicker = MaterialTimePicker.Builder()
-            .setTitleText("Select Time")
+            .setTitleText(R.string.postpone_select_time)
             .setTimeFormat(TimeFormat.CLOCK_24H)
             .setHour(dateTime.hour)
             .setMinute(dateTime.minute)
@@ -83,10 +92,8 @@ internal class PostponeMessageDialog(
     }
 
     private fun formatText() {
-        val formattedDate = dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        val formattedTime = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-        binding.dateEditText.setText(formattedDate)
-        binding.timeEditText.setText(formattedTime)
+        binding.dateEditText.setText(dateTime.format(DATE_FORMAT))
+        binding.timeEditText.setText(dateTime.format(TIME_FORMAT))
     }
 
     fun show(): PostponeMessageDialog {
@@ -97,20 +104,31 @@ internal class PostponeMessageDialog(
         MaterialAlertDialogBuilder(activity)
             .setView(binding.root)
             .setTitle(R.string.postpone_message)
-            .setPositiveButton(activity.getString(R.string.done)) { _, _ ->
-                onPositiveButtonClick(
-                    dateTime.atZoneSameInstant(ZoneOffset.UTC).toOffsetDateTime()
-                )
+            .setPositiveButton(R.string.done) { _, _ ->
+                handled = true
+                onPositiveButtonClick(dateTime.atZone(zone).toOffsetDateTime())
             }
-            .setNegativeButton(activity.getString(R.string.cancel), onNegativeButtonClick?.let { { _, _ -> it() } })
+            .setNegativeButton(R.string.cancel, null)
             .apply {
-                if (defaultDateTime != null) {
-                    setNeutralButton("Delete postponement") { _, _ -> onNeutralButtonClick() }
+                if (currentPostponement != null) {
+                    setNeutralButton(R.string.postpone_remove) { _, _ ->
+                        handled = true
+                        onNeutralButtonClick()
+                    }
                 }
             }
-            .setOnDismissListener { onNegativeButtonClick?.let { it() } }
+            .setOnDismissListener {
+                if (!handled) {
+                    onCancel?.invoke()
+                }
+            }
             .show()
         return this
     }
 
+    private companion object {
+        const val DEFAULT_DELAY_MINUTES = 15L
+        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    }
 }

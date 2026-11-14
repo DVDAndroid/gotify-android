@@ -9,13 +9,15 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.Network
-import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.preference.PreferenceManager
 import com.github.gotify.BuildConfig
 import com.github.gotify.CoilInstance
 import com.github.gotify.MarkwonFactory
@@ -39,6 +41,11 @@ import com.github.gotify.messages.PostponeMessageActivity
 import io.noties.markwon.Markwon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 import org.tinylog.kotlin.Logger
 
 internal class WebSocketService : Service() {
@@ -55,6 +62,12 @@ internal class WebSocketService : Service() {
             override fun onAvailable(network: Network) {
                 super.onAvailable(network)
                 Logger.info("WebSocket: Network available, reconnect if needed.")
+                connection?.start()
+            }
+
+            override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+                super.onLinkPropertiesChanged(network, linkProperties)
+                Logger.info("WebSocket: Network properties changed, reconnect if needed.")
                 connection?.start()
             }
         }
@@ -103,16 +116,29 @@ internal class WebSocketService : Service() {
 
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val reconnectDelay =
+            sharedPreferences.getString(
+                getString(R.string.setting_key_reconnect_delay),
+                null
+            )?.toIntOrNull()?.toDuration(DurationUnit.SECONDS) ?: 1.minutes
+
+        val exponentialBackoff = sharedPreferences.getBoolean(
+            getString(R.string.setting_key_exponential_backoff),
+            true
+        )
 
         connection = WebSocketConnection(
             settings.url,
             settings.sslSettings(),
             settings.token,
-            alarmManager
+            alarmManager,
+            reconnectDelay,
+            exponentialBackoff
         )
             .onOpen { onOpen() }
             .onClose { onClose() }
-            .onFailure { status, minutes -> onFailure(status, minutes) }
+            .onFailure { status, reconnectIn -> onFailure(status, reconnectIn) }
             .onMessage { message -> onMessage(message) }
             .onReconnected { notifyMissedNotifications() }
             .start()
@@ -173,19 +199,14 @@ internal class WebSocketService : Service() {
     }
 
     private fun doReconnect() {
-        if (connection == null) {
-            return
-        }
-        connection!!.scheduleReconnect(15)
+        connection?.scheduleReconnectNow(15.seconds)
     }
 
-    private fun onFailure(status: String, minutes: Int) {
+    private fun onFailure(status: String, reconnectIn: Duration) {
         val title = getString(R.string.websocket_error, status)
-        val intervalUnit = resources
-            .getQuantityString(R.plurals.websocket_retry_interval, minutes, minutes)
         showForegroundNotification(
             title,
-            "${getString(R.string.websocket_reconnect)} $intervalUnit"
+            getString(R.string.websocket_reconnect, reconnectIn.toString())
         )
     }
 
@@ -215,7 +236,7 @@ internal class WebSocketService : Service() {
         messages.forEach { message ->
             if (lastReceivedMessage.get() < message.id) {
                 lastReceivedMessage.set(message.id)
-                highestPriority = highestPriority.coerceAtLeast(message.priority)
+                highestPriority = highestPriority.coerceAtLeast(message.priority ?: 0L)
             }
             broadcast(message)
         }
@@ -236,9 +257,9 @@ internal class WebSocketService : Service() {
         broadcast(message)
         showNotification(
             message.id,
-            message.title,
+            message.title ?: "",
             message.message,
-            message.priority,
+            message.priority ?: 0L,
             message.extras,
             message.appid
         )
@@ -289,6 +310,22 @@ internal class WebSocketService : Service() {
         }
     }
 
+    private fun postponeAction(messageId: Long): NotificationCompat.Action {
+        val intent = Intent(this, PostponeMessageActivity::class.java)
+            .putExtra(PostponeMessageActivity.EXTRA_MESSAGE_ID, messageId)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            Utils.longToInt(messageId),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Action(
+            R.drawable.ic_schedule,
+            getString(R.string.postpone),
+            pendingIntent
+        )
+    }
+
     private fun showNotification(
         id: Int,
         title: String,
@@ -318,17 +355,28 @@ internal class WebSocketService : Service() {
         )
 
         if (intentUrl != null) {
-            intent = Intent(this, IntentUrlDialogActivity::class.java).apply {
-                putExtra(IntentUrlDialogActivity.EXTRA_KEY_URL, intentUrl)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            val prompt = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(
+                getString(R.string.setting_key_prompt_onreceive_intent),
+                resources.getBoolean(R.bool.prompt_onreceive_intent)
+            )
+            val onReceiveIntent = if (prompt) {
+                Intent(this, IntentUrlDialogActivity::class.java).apply {
+                    putExtra(IntentUrlDialogActivity.EXTRA_KEY_URL, intentUrl)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            } else {
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = intentUrl.toUri()
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
             }
-            startActivity(intent)
+            startActivity(onReceiveIntent)
         }
 
         val url = Extras.getNotificationUrl(extras)
         if (url != null) {
             intent = Intent(Intent.ACTION_VIEW)
-            intent.data = Uri.parse(url)
+            intent.data = url.toUri()
         } else {
             intent = Intent(this, MessagesActivity::class.java)
         }
@@ -360,19 +408,6 @@ internal class WebSocketService : Service() {
             showNotificationGroup(channelId)
         }
 
-        val postponeAction = NotificationCompat.Action(
-            R.drawable.ic_gotify,
-            getString(R.string.postpone),
-            PendingIntent.getActivity(
-                this,
-                Utils.longToInt(id),
-                Intent(this, PostponeMessageActivity::class.java).apply {
-                    putExtra("id", id)
-                },
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        )
-
         b.setAutoCancel(true)
             .setDefaults(Notification.DEFAULT_ALL)
             .setWhen(System.currentTimeMillis())
@@ -385,7 +420,7 @@ internal class WebSocketService : Service() {
             .setLights(Color.CYAN, 1000, 5000)
             .setColor(ContextCompat.getColor(applicationContext, R.color.colorPrimary))
             .setContentIntent(contentIntent)
-            .addAction(postponeAction)
+            .addAction(postponeAction(id))
 
         var formattedMessage = message as CharSequence
         var newMessage: String? = null

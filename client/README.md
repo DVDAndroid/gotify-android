@@ -1,4 +1,4 @@
-# swagger-java-client
+# openapi-java-client
 
 ## Requirements
 
@@ -24,16 +24,15 @@ After the client library is installed/deployed, you can use it in your Maven pro
 
 ```xml
 <dependency>
-    <groupId>io.swagger</groupId>
-    <artifactId>swagger-java-client</artifactId>
-    <version>1.0.0</version>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-java-client</artifactId>
+    <version>2.1.0</version>
     <scope>compile</scope>
 </dependency>
 
 ```
 
 ## Author
-
 
 
 
